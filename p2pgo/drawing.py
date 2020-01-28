@@ -9,7 +9,7 @@ from game import Game
 
 
 class GUI:
-    def __init__(self, screen_width: int, screen_height: int, grid_dims: Tuple[int, int]):
+    def __init__(self, screen_width: int, screen_height: int, grid_dims: Tuple[int, int], conn):
         self.grid_dims = grid_dims
         smaller_screen_dim = min(screen_width, screen_height)
         self.edge_length: float = smaller_screen_dim * 9 / 10
@@ -26,15 +26,19 @@ class GUI:
             (self.grid_origin[0], self.grid_origin[1] + int(y * grid_spacing_y)),
             (self.grid_origin[0] + self.edge_length, self.grid_origin[1] + int(y * grid_spacing_y))]
             for y in range(grid_dims[1])]
+        # No the GUI should not have a reference to the socket
+        # Yes I want something fast before I go to bed
+        self.conn = conn
 
     def handle_inputs(self, game: Game):
-        if IsMouseButtonReleased(MOUSE_LEFT_BUTTON):
+        if game.my_turn and IsMouseButtonReleased(MOUSE_LEFT_BUTTON):
             x, y = self._world_to_grid(GetMouseX(), GetMouseY())
             if x is None or y is None:
                 return
 
             if game.is_valid_move(x, y):
                 game.play(x, y)
+                self.conn.send(f"{x},{y}".encode('ascii'))
 
     def draw(self, game: Game):
         BeginDrawing()

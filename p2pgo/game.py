@@ -8,9 +8,10 @@ class Colour(Enum):
 
 
 class Game:
-    def __init__(self, board_width, board_height):
+    def __init__(self, board_width, board_height, player_colour):
         self.grid: List[List[Optional[Colour]]] = self._empty_grid(board_width, board_height)
         self.current_player: Colour = Colour.BLACK
+        self.player_colour = player_colour
 
     def is_valid_move(self, x: int, y: int):
         # TODO: Check ko + suicide
@@ -22,6 +23,10 @@ class Game:
             self.current_player = Colour.WHITE
         else:
             self.current_player = Colour.BLACK
+
+    @property
+    def my_turn(self):
+        return self.current_player == self.player_colour
 
     @staticmethod
     def _empty_grid(width, height):
