@@ -19,8 +19,12 @@ class Interface:
             click = self.gui.grid_was_clicked()
             if click:
                 x, y = click
-                game.play(x, y)
-                self.conn.send(f"{x},{y}".encode('ascii'))
+                valid, msg = game.is_valid_move(x, y)
+                if valid:
+                    game.play(x, y)
+                    self.conn.send(f"{x},{y}".encode('ascii'))
+                else:
+                    print(msg)
         else:
             try:
                 msg = self.conn.recv(1024)

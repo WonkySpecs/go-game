@@ -13,9 +13,29 @@ class Game:
         self.current_player: Colour = Colour.BLACK
         self.player_colour: Colour = player_colour
 
-    def is_valid_move(self, x: int, y: int):
-        # TODO: Check ko + suicide
-        return self.grid[x][y] is None
+    def is_valid_move(self, x: int, y: int) -> Tuple[bool, Optional[str]]:
+        if self.grid[x][y] is not None:
+            return False, "There is already a stone there"
+
+        # TODO: Check ko
+        self.grid[x][y] = self.current_player
+        valid = not self._is_suicide(x, y)
+        self.grid[x][y] = None
+
+        return valid, None if valid else "Suicidal moves not allowed"
+
+    def _is_suicide(self, x: int, y: int):
+        if self._is_group_alive(self._get_group_at(x, y)):
+            return False
+
+        # If play captures any neighbouring group, it is not suicide
+        for nx, ny in self._neighbours(x, y):
+            if self.grid[nx][ny] == self.grid[x][y]:
+                continue
+            group = self._get_group_at(nx, ny)
+            if not self._is_group_alive(group):
+                return False
+        return True
 
     def play(self, x: int, y: int):
         self.grid[x][y] = self.current_player
@@ -38,22 +58,20 @@ class Game:
         group = []
 
         def should_visit(coord):
-            nx, ny = coord
-
             return coord not in to_visit \
                 and coord not in group \
-                and self.grid[nx][ny] == self.grid[x][y]
+                and self.grid[coord[0]][coord[1]] == self.grid[x][y]
 
         while to_visit:
             visiting = to_visit.pop()
-            vx, vy = visiting
-            to_visit.extend([c for c in self._neighbours(vx, vy) if should_visit(c)])
+            to_visit.extend([c for c in self._neighbours(visiting[0], visiting[1])
+                             if should_visit(c)])
             group.append(visiting)
         return group
 
     def _is_group_alive(self, group: Iterable[Tuple[int, int]]):
-        for (x, y) in group:
-            for (nx, ny) in self._neighbours(x, y):
+        for x, y in group:
+            for nx, ny in self._neighbours(x, y):
                 if self.grid[nx][ny] is None:
                     return True
         return False
