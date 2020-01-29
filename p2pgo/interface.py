@@ -82,7 +82,7 @@ class GUI:
         def too_far(fractional):
             return abs(fractional - round(fractional)) > 0.3
 
-        if too_far(x) or too_far(y):
+        if round(x) < 0 or round(y) < 0 or too_far(x) or too_far(y):
             return None
 
         return round(x), round(y)
