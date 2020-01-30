@@ -15,26 +15,39 @@ class Interface:
         self.conn = conn
 
     def handle_inputs(self, game):
-        if game.my_turn:
-            click = self.gui.grid_was_clicked()
-            if click:
-                x, y = click
-                valid, msg = game.is_valid_move(x, y)
-                if valid:
-                    game.play(x, y)
-                    self.conn.send(f"{x},{y}".encode('ascii'))
-                else:
-                    self.gui.error_message = msg
+        handler = self._handle_gui_interactions if game.my_turn else self._handle_network_interaction
+        handler(game)
 
-            self.gui.set_ghost(game.player_colour)
-        else:
-            try:
-                msg = self.conn.recv(1024)
+    def _handle_gui_interactions(self, game):
+        click = self.gui.get_grid_click()
+        if click:
+            x, y = click
+            valid, msg = game.is_valid_move(x, y)
+            if valid:
+                game.play(x, y)
+                self.conn.send(f"{x},{y}".encode('ascii'))
+                self.gui.ghost = None
+            else:
+                self.gui.error_message = msg
+
+        button_pressed = self.gui.get_button_press()
+        if button_pressed == "pass":
+            game.pass_turn()
+            self.conn.send(b"pass")
+
+        self.gui.set_ghost(game.player_colour)
+
+    def _handle_network_interaction(self, game):
+        try:
+            msg = self.conn.recv(1024)
+            if msg == b"pass":
+                game.pass_turn()
+            else:
                 x, y, = [int(coord) for coord in msg.decode('ascii').split(",")]
                 game.play(x, y)
-            except BlockingIOError:
-                # Thrown if nothing has been received
-                pass
+        except BlockingIOError:
+            # Thrown if nothing has been received
+            pass
 
 
 # Assumption being made that grid is square in lots of places
@@ -60,10 +73,26 @@ class GUI:
         self.stone_size = grid_spacing_x / 2.4
         self.error_message: Optional[str] = None
         self.error_timer: int = 170
+        self.buttons = {
+            ("pass", b"Pass Turn"): (5,
+                                     round(screen_height / 2),
+                                     105,
+                                     25),
+        }
 
-    def grid_was_clicked(self) -> Optional[Tuple[int, int]]:
+    def get_grid_click(self) -> Optional[Tuple[int, int]]:
         if IsMouseButtonReleased(MOUSE_LEFT_BUTTON):
             return self._world_to_grid(GetMouseX(), GetMouseY())
+
+    def get_button_press(self):
+        if IsMouseButtonReleased(MOUSE_LEFT_BUTTON):
+            for (name, _), area in self.buttons.items():
+                if GUI._in_rectangle(GetMouseX(), GetMouseY(), area):
+                    return name
+
+    @staticmethod
+    def _in_rectangle(x: int, y: int, rect: Tuple[int, int, int, int]):
+        return rect[0] <= x <= rect[0] + rect[2] and rect[1] <= y <= rect[1] + rect[3]
 
     def draw(self, game: Game):
         BeginDrawing()
@@ -81,6 +110,11 @@ class GUI:
                     continue
                 colour = BLACK if stone == Colour.BLACK else WHITE
                 DrawCircleV(self._grid_to_world(x, y), self.stone_size, colour)
+
+        for (_, text), area in self.buttons.items():
+            col = DARKGRAY if GUI._in_rectangle(GetMouseX(), GetMouseY(), area) else GRAY
+            DrawRectangle(area[0], area[1], area[2], area[3], col)
+            DrawText(text, area[0] + 5, area[1] + 2, 18, BLACK)
 
         if self.ghost:
             colour, (x, y) = self.ghost

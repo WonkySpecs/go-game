@@ -64,10 +64,9 @@ class Game:
         if len(self._board_history) > MAX_HISTORY_ENTRIES:
             self._board_history = self._board_history[1:]
 
-        if self.current_player == Colour.BLACK:
-            self.current_player = Colour.WHITE
-        else:
-            self.current_player = Colour.BLACK
+        self.current_player =\
+            Colour.BLACK if self.current_player == Colour.WHITE else Colour.WHITE
+
         self._capture_around(self.current_player, x, y)
 
     def _capture_around(self, colour_to_capture: Colour, x: int, y: int):
@@ -106,6 +105,10 @@ class Game:
             return 0 <= coord[0] < len(self.grid) and 0 <= coord[1] < len(self.grid[0])
 
         return filter(in_grid, [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)])
+
+    def pass_turn(self):
+        self.current_player = \
+            Colour.BLACK if self.current_player == Colour.WHITE else Colour.WHITE
 
     @property
     def my_turn(self):
