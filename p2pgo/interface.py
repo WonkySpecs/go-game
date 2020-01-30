@@ -25,6 +25,8 @@ class Interface:
                     self.conn.send(f"{x},{y}".encode('ascii'))
                 else:
                     print(msg)
+
+            self.gui.set_ghost(game.player_colour)
         else:
             try:
                 msg = self.conn.recv(1024)
@@ -32,8 +34,7 @@ class Interface:
                 game.play(x, y)
             except BlockingIOError:
                 # Thrown if nothing has been received
-                return
-        # Ghost
+                pass
 
 
 # Assumption being made that grid is square in lots of places
@@ -55,6 +56,8 @@ class GUI:
             (self.grid_origin[0], self.grid_origin[1] + int(y * grid_spacing_y)),
             (self.grid_origin[0] + self.edge_length, self.grid_origin[1] + int(y * grid_spacing_y))]
             for y in range(grid_dims[1])]
+        self.ghost: Optional[Tuple[Colour, Tuple[int, int]]] = None
+        self.stone_size = grid_spacing_x / 2.4
 
     def grid_was_clicked(self) -> Optional[Tuple[int, int]]:
         if IsMouseButtonReleased(MOUSE_LEFT_BUTTON):
@@ -75,7 +78,14 @@ class GUI:
                 if stone is None:
                     continue
                 colour = BLACK if stone == Colour.BLACK else WHITE
-                DrawCircleV(self._grid_to_world(x, y), 15, colour)
+                DrawCircleV(self._grid_to_world(x, y), self.stone_size, colour)
+
+        if self.ghost:
+            colour, (x, y) = self.ghost
+            DrawCircleV(self._grid_to_world(x, y),
+                        self.stone_size / 1.8,
+                        BLACK if colour == Colour.BLACK else WHITE)
+
         EndDrawing()
 
     def _world_to_grid(self, wx: float, wy: float) -> Optional[Tuple[int, int]]:
@@ -94,3 +104,10 @@ class GUI:
     def _grid_to_world(self, x: int, y: int) -> Tuple[float, float]:
         return (self.grid_origin[0] + self.edge_length * (x / (self.grid_dims[0] - 1)),
                 self.grid_origin[1] + self.edge_length * (y / (self.grid_dims[1] - 1)))
+
+    def set_ghost(self, colour):
+        mouse_grid_pos = self._world_to_grid(GetMouseX(), GetMouseY())
+        if mouse_grid_pos:
+            self.ghost = (colour, (mouse_grid_pos[0], mouse_grid_pos[1]))
+        else:
+            self.ghost = None
