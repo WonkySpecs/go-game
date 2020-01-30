@@ -24,7 +24,7 @@ class Interface:
                     game.play(x, y)
                     self.conn.send(f"{x},{y}".encode('ascii'))
                 else:
-                    print(msg)
+                    self.gui.error_message = msg
 
             self.gui.set_ghost(game.player_colour)
         else:
@@ -58,6 +58,8 @@ class GUI:
             for y in range(grid_dims[1])]
         self.ghost: Optional[Tuple[Colour, Tuple[int, int]]] = None
         self.stone_size = grid_spacing_x / 2.4
+        self.error_message: Optional[str] = None
+        self.error_timer: int = 170
 
     def grid_was_clicked(self) -> Optional[Tuple[int, int]]:
         if IsMouseButtonReleased(MOUSE_LEFT_BUTTON):
@@ -85,6 +87,21 @@ class GUI:
             DrawCircleV(self._grid_to_world(x, y),
                         self.stone_size / 1.8,
                         BLACK if colour == Colour.BLACK else WHITE)
+
+        if self.error_message:
+            msg = self.error_message.encode("ascii")
+            font_size = 25
+            msg_width = MeasureText(msg, font_size)
+            msg_x = round(GetScreenWidth() / 2 - msg_width / 2)
+            msg_y = GetScreenHeight() - 40
+
+            if self.error_timer % 30 < 25:
+                DrawText(msg, msg_x, msg_y, font_size, RED)
+
+            self.error_timer -= 1
+            if self.error_timer < 0:
+                self.error_message = None
+                self.error_timer = 170
 
         EndDrawing()
 
