@@ -15,7 +15,7 @@ class Interface:
         self.conn = conn
 
     def handle_inputs(self, game):
-        if game.current_player == game.player_colour:
+        if game.my_turn:
             click = self.gui.grid_was_clicked()
             if click:
                 x, y = click
